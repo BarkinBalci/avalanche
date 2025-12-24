@@ -1,0 +1,104 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: deployments/docker/api.Dockerfile
+    container_name: event-analytics-api
+    ports:
+      - "8080:8080"
+    environment:
+      - VALKEY_HOST=valkey
+      - VALKEY_PORT=6379
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_DB=events
+      - SQS_ENDPOINT=http://elasticmq:9324
+      - SQS_QUEUE_URL=http://elasticmq:9324/000000000000/events
+    depends_on:
+      valkey:
+        condition: service_started
+      clickhouse:
+        condition: service_started
+      elasticmq:
+        condition: service_started
+    networks:
+      - event-analytics-network
+    restart: unless-stopped
+
+  consumer:
+    build:
+      context: .
+      dockerfile: deployments/docker/consumer.Dockerfile
+    container_name: event-analytics-consumer
+    environment:
+      - VALKEY_HOST=valkey
+      - VALKEY_PORT=6379
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_DB=events
+      - SQS_ENDPOINT=http://elasticmq:9324
+      - SQS_QUEUE_URL=http://elasticmq:9324/000000000000/events
+    depends_on:
+      valkey:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      elasticmq:
+        condition: service_healthy
+    networks:
+      - event-analytics-network
+    restart: unless-stopped
+
+  valkey:
+    image: valkey/valkey:latest
+    container_name: event-analytics-valkey
+    ports:
+      - "6379:6379"
+    command: valkey-server --appendonly yes
+    volumes:
+      - valkey-data:/data
+    networks:
+      - event-analytics-network
+    restart: unless-stopped
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: event-analytics-clickhouse
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native client
+    environment:
+      - CLICKHOUSE_DB=events
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - clickhouse-logs:/var/log/clickhouse-server
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      - event-analytics-network
+    restart: unless-stopped
+
+  elasticmq:
+    image: softwaremill/elasticmq:latest
+    container_name: event-analytics-elasticmq
+    ports:
+      - "9324:9324"  # API Server
+      - "9325:9325"  # Web UI
+    volumes:
+      - ./elasticmq.conf:/opt/elasticmq.conf:ro
+    networks:
+      - event-analytics-network
+    restart: unless-stopped
+
+networks:
+  event-analytics-network:
+    driver: bridge
+
+volumes:
+  valkey-data:
+  clickhouse-data:
+  clickhouse-logs:

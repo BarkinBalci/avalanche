@@ -1,33 +1,45 @@
 package service
 
 import (
+	"context"
+	"fmt"
 	"log"
+	"time"
 
+	"github.com/BarkinBalci/event-analytics-service/internal/clients"
 	"github.com/BarkinBalci/event-analytics-service/internal/models"
+	"github.com/google/uuid"
 )
 
 // EventService represents event service
 type EventService struct {
-	// TODO: add SQS and Redis Clients
+	sqsClient *clients.SQSClient
 }
 
 // NewEventService creates a new event service
-func NewEventService() *EventService {
-	return &EventService{}
+func NewEventService(sqsClient *clients.SQSClient) *EventService {
+	return &EventService{
+		sqsClient: sqsClient,
+	}
 }
 
 // ProcessEvent processes a single event
 func (s *EventService) ProcessEvent(event *models.PublishEventRequest) (string, error) {
-	// TODO: Validate timestamp must not be in the future when using seconds precision
+	ctx := context.Background()
 
-	// TODO: Check idempotency in Redis
+	currentTime := time.Now().Unix()
+	if event.Timestamp > currentTime+1 {
+		return "", fmt.Errorf("timestamp cannot be in the future: %d > %d", event.Timestamp, currentTime)
+	}
 
-	// TODO: Publish to SQS
+	eventID := uuid.New().String()
 
-	log.Printf("Event received - Name: %s, User: %s, Channel: %s",
-		event.EventName, event.UserID, event.Channel)
+	err := s.sqsClient.PublishEvent(ctx, event, eventID)
+	if err != nil {
+		return "", fmt.Errorf("failed to publish event to SQS: %w", err)
+	}
 
-	return event.EventName, nil // FIXME: Return event ID
+	return eventID, nil
 }
 
 // ProcessBulkEvents validates and processes multiple events

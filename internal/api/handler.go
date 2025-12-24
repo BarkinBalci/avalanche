@@ -14,9 +14,9 @@ type Handler struct {
 	router       *gin.Engine
 }
 
-func NewHandler() *Handler {
+func NewHandler(eventService *service.EventService) *Handler {
 	h := &Handler{
-		eventService: service.NewEventService(),
+		eventService: eventService,
 		router:       gin.Default(),
 	}
 
