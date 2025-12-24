@@ -45,7 +45,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./api.Dockerfile
+          file: ./deployments/docker/api.Dockerfile
           push: false
           tags: event-analytics-service-api:latest
           cache-from: type=gha
@@ -65,7 +65,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./consumer.Dockerfile
+          file: ./deployments/docker/consumer.Dockerfile
           push: false
           tags: event-analytics-service-consumer:latest
           cache-from: type=gha
