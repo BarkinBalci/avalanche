@@ -1,6 +1,6 @@
 basePath: /
 definitions:
-  models.ErrorResponse:
+  dto.ErrorResponse:
     properties:
       error:
         example: validation_error
@@ -9,7 +9,41 @@ definitions:
         example: event_name is required
         type: string
     type: object
-  models.PublishBulkEventsResponse:
+  dto.GetMetricsResponse:
+    properties:
+      event_name:
+        example: product_view
+        type: string
+      from:
+        example: 1723475612
+        type: integer
+      group_by:
+        example: channel
+        type: string
+      groups:
+        items:
+          $ref: '#/definitions/dto.MetricsGroupData'
+        type: array
+      to:
+        example: 1723562012
+        type: integer
+      total_count:
+        example: 5000
+        type: integer
+      unique_count:
+        example: 2500
+        type: integer
+    type: object
+  dto.MetricsGroupData:
+    properties:
+      group_value:
+        example: web
+        type: string
+      total_count:
+        example: 1500
+        type: integer
+    type: object
+  dto.PublishBulkEventsResponse:
     properties:
       accepted:
         example: 5
@@ -32,7 +66,7 @@ definitions:
         example: 0
         type: integer
     type: object
-  models.PublishEventRequest:
+  dto.PublishEventRequest:
     properties:
       campaign_id:
         example: cmp_987
@@ -70,7 +104,7 @@ definitions:
     - timestamp
     - user_id
     type: object
-  models.PublishEventResponse:
+  dto.PublishEventResponse:
     properties:
       event_id:
         example: evt_1a2b3c4d5e6f
@@ -79,11 +113,11 @@ definitions:
         example: accepted
         type: string
     type: object
-  models.PublishEventsBulkRequest:
+  dto.PublishEventsBulkRequest:
     properties:
       events:
         items:
-          $ref: '#/definitions/models.PublishEventRequest'
+          $ref: '#/definitions/dto.PublishEventRequest'
         maxItems: 1000
         minItems: 1
         type: array
@@ -108,22 +142,22 @@ paths:
         name: event
         required: true
         schema:
-          $ref: '#/definitions/models.PublishEventRequest'
+          $ref: '#/definitions/dto.PublishEventRequest'
       produces:
       - application/json
       responses:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/models.PublishEventResponse'
+            $ref: '#/definitions/dto.PublishEventResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/models.ErrorResponse'
+            $ref: '#/definitions/dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/models.ErrorResponse'
+            $ref: '#/definitions/dto.ErrorResponse'
       summary: Publish a single event
       tags:
       - events
@@ -138,22 +172,22 @@ paths:
         name: events
         required: true
         schema:
-          $ref: '#/definitions/models.PublishEventsBulkRequest'
+          $ref: '#/definitions/dto.PublishEventsBulkRequest'
       produces:
       - application/json
       responses:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/models.PublishBulkEventsResponse'
+            $ref: '#/definitions/dto.PublishBulkEventsResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/models.ErrorResponse'
+            $ref: '#/definitions/dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/models.ErrorResponse'
+            $ref: '#/definitions/dto.ErrorResponse'
       summary: Publish multiple events
       tags:
       - events
@@ -172,6 +206,47 @@ paths:
       summary: Health check
       tags:
       - health
+  /metrics:
+    get:
+      description: Retrieve aggregated event metrics with optional grouping by channel
+      parameters:
+      - description: Event name to filter by
+        in: query
+        name: event_name
+        required: true
+        type: string
+      - description: Start timestamp (Unix epoch)
+        in: query
+        name: from
+        required: true
+        type: integer
+      - description: End timestamp (Unix epoch)
+        in: query
+        name: to
+        required: true
+        type: integer
+      - description: Field to group by (channel)
+        in: query
+        name: group_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetMetricsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get aggregated metrics
+      tags:
+      - metrics
 schemes:
 - http
 - https

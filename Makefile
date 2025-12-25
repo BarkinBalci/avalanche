@@ -1,4 +1,4 @@
-.PHONY: fmt build build-api build-consumer lint swagger
+.PHONY: fmt build build-api build-consumer lint swagger env
 
 fmt:
 	@echo "Formatting code..."
@@ -25,3 +25,7 @@ lint:
 swagger:
 	@echo "Generating swagger documentation..."
 	@swag init -g cmd/api/main.go -o docs
+
+env:
+	@echo "Copying .env.example to .env..."
+	@cp .env.example .env

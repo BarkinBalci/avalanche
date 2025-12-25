@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.PublishEventRequest"
+                            "$ref": "#/definitions/dto.PublishEventRequest"
                         }
                     }
                 ],
@@ -43,19 +43,19 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/models.PublishEventResponse"
+                            "$ref": "#/definitions/dto.PublishEventResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -81,7 +81,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.PublishEventsBulkRequest"
+                            "$ref": "#/definitions/dto.PublishEventsBulkRequest"
                         }
                     }
                 ],
@@ -89,19 +89,19 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/models.PublishBulkEventsResponse"
+                            "$ref": "#/definitions/dto.PublishBulkEventsResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -129,10 +129,71 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/metrics": {
+            "get": {
+                "description": "Retrieve aggregated event metrics with optional grouping by channel",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Get aggregated metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Event name to filter by",
+                        "name": "event_name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start timestamp (Unix epoch)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End timestamp (Unix epoch)",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Field to group by (channel)",
+                        "name": "group_by",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GetMetricsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
-        "models.ErrorResponse": {
+        "dto.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -145,7 +206,55 @@ const docTemplate = `{
                 }
             }
         },
-        "models.PublishBulkEventsResponse": {
+        "dto.GetMetricsResponse": {
+            "type": "object",
+            "properties": {
+                "event_name": {
+                    "type": "string",
+                    "example": "product_view"
+                },
+                "from": {
+                    "type": "integer",
+                    "example": 1723475612
+                },
+                "group_by": {
+                    "type": "string",
+                    "example": "channel"
+                },
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.MetricsGroupData"
+                    }
+                },
+                "to": {
+                    "type": "integer",
+                    "example": 1723562012
+                },
+                "total_count": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "unique_count": {
+                    "type": "integer",
+                    "example": 2500
+                }
+            }
+        },
+        "dto.MetricsGroupData": {
+            "type": "object",
+            "properties": {
+                "group_value": {
+                    "type": "string",
+                    "example": "web"
+                },
+                "total_count": {
+                    "type": "integer",
+                    "example": 1500
+                }
+            }
+        },
+        "dto.PublishBulkEventsResponse": {
             "type": "object",
             "properties": {
                 "accepted": {
@@ -178,7 +287,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.PublishEventRequest": {
+        "dto.PublishEventRequest": {
             "type": "object",
             "required": [
                 "channel",
@@ -230,7 +339,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.PublishEventResponse": {
+        "dto.PublishEventResponse": {
             "type": "object",
             "properties": {
                 "event_id": {
@@ -243,7 +352,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.PublishEventsBulkRequest": {
+        "dto.PublishEventsBulkRequest": {
             "type": "object",
             "required": [
                 "events"
@@ -254,7 +363,7 @@ const docTemplate = `{
                     "maxItems": 1000,
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/definitions/models.PublishEventRequest"
+                        "$ref": "#/definitions/dto.PublishEventRequest"
                     }
                 }
             }

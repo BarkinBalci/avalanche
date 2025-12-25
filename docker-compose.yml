@@ -9,8 +9,6 @@ services:
     env_file:
       - .env
     depends_on:
-      valkey:
-        condition: service_healthy
       clickhouse:
         condition: service_healthy
       elasticmq:
@@ -27,8 +25,6 @@ services:
     env_file:
       - .env
     depends_on:
-      valkey:
-        condition: service_healthy
       clickhouse:
         condition: service_healthy
       elasticmq:
@@ -37,30 +33,14 @@ services:
       - event-analytics-network
     restart: unless-stopped
 
-  valkey:
-    image: valkey/valkey:latest
-    container_name: event-analytics-valkey
-    ports:
-      - "6379:6379"
-    command: valkey-server --appendonly yes
-    volumes:
-      - valkey-data:/data
-    networks:
-      - event-analytics-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
-
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: event-analytics-clickhouse
     ports:
       - "8123:8123"  # HTTP interface
       - "9000:9000"  # Native client
+    environment:
+      - CLICKHOUSE_DB=events
     env_file:
       - .env
     volumes:
@@ -92,7 +72,7 @@ services:
       - event-analytics-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9324/"]
+      test: ["CMD", "curl", "-f", "http://localhost:9325/"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -103,6 +83,5 @@ networks:
     driver: bridge
 
 volumes:
-  valkey-data:
   clickhouse-data:
   clickhouse-logs:
