@@ -1,4 +1,4 @@
-.PHONY: fmt build build-api build-consumer lint
+.PHONY: fmt build build-api build-consumer lint swagger
 
 fmt:
 	@echo "Formatting code..."
@@ -21,3 +21,7 @@ test:
 lint:
 	@echo "Running linter..."
 	@golangci-lint run
+
+swagger:
+	@echo "Generating swagger documentation..."
+	@swag init -g cmd/api/main.go -o docs

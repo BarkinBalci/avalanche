@@ -2,13 +2,13 @@ package models
 
 // PublishEventRequest represents a publish event request
 type PublishEventRequest struct {
-	EventName  string                 `json:"event_name" binding:"required"`
-	Channel    string                 `json:"channel" binding:"required"`
-	CampaignID string                 `json:"campaign_id"`
-	UserID     string                 `json:"user_id" binding:"required"`
-	Timestamp  int64                  `json:"timestamp" binding:"required"`
-	Tags       []string               `json:"tags"`
-	Metadata   map[string]interface{} `json:"metadata"`
+	EventName  string                 `json:"event_name" binding:"required" example:"product_view"`
+	Channel    string                 `json:"channel" binding:"required" example:"web"`
+	CampaignID string                 `json:"campaign_id" example:"cmp_987"`
+	UserID     string                 `json:"user_id" binding:"required" example:"user_123"`
+	Timestamp  int64                  `json:"timestamp" binding:"required" example:"1723475612"`
+	Tags       []string               `json:"tags" example:"electronics,homepage,flash_sale"`
+	Metadata   map[string]interface{} `json:"metadata" swaggertype:"object,string" example:"product_id:prod-789,price:129.99"`
 }
 
 // PublishEventsBulkRequest represents a publish bulk event request

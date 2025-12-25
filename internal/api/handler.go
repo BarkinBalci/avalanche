@@ -4,7 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
+	_ "github.com/BarkinBalci/event-analytics-service/docs"
 	"github.com/BarkinBalci/event-analytics-service/internal/models"
 	"github.com/BarkinBalci/event-analytics-service/internal/service"
 )
@@ -33,9 +36,16 @@ func (h *Handler) registerRoutes() {
 	h.router.GET("/health", h.healthCheck)
 	h.router.POST("/events", h.publishEvent)
 	h.router.POST("/events/bulk", h.publishEventsBulk)
+	h.router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
 
 // healthCheck handles health check requests
+// @Summary Health check
+// @Description Check if the service is running
+// @Tags health
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /health [get]
 func (h *Handler) healthCheck(c *gin.Context) {
 	// TODO: add a more sophisticated health check
 	c.JSON(http.StatusOK, gin.H{
@@ -44,6 +54,16 @@ func (h *Handler) healthCheck(c *gin.Context) {
 }
 
 // publishEvent handles POST /events
+// @Summary Publish a single event
+// @Description Publish a single analytics event to the queue
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param event body models.PublishEventRequest true "Event data"
+// @Success 202 {object} models.PublishEventResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /events [post]
 func (h *Handler) publishEvent(c *gin.Context) {
 	var req models.PublishEventRequest
 
@@ -71,6 +91,16 @@ func (h *Handler) publishEvent(c *gin.Context) {
 }
 
 // publishEventsBulk handles POST /events/bulk
+// @Summary Publish multiple events
+// @Description Publish multiple analytics events in bulk to the queue
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param events body models.PublishEventsBulkRequest true "Bulk events data"
+// @Success 202 {object} models.PublishBulkEventsResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /events/bulk [post]
 func (h *Handler) publishEventsBulk(c *gin.Context) {
 	var bulkRequest models.PublishEventsBulkRequest
 
