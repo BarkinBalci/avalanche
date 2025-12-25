@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"go.uber.org/zap"
 
-	"github.com/BarkinBalci/event-analytics-service/internal/queue/sqs"
+	"github.com/BarkinBalci/event-analytics-service/internal/queue"
 )
 
 // ReceiverConfig configures the SQS receiver
@@ -21,17 +21,17 @@ type ReceiverConfig struct {
 
 // Receiver handles receiving messages from SQS
 type Receiver struct {
-	sqsClient *sqs.Client
-	config    ReceiverConfig
-	log       *zap.Logger
+	consumer queue.QueueConsumer
+	config   ReceiverConfig
+	log      *zap.Logger
 }
 
 // NewReceiver creates a new SQS receiver
-func NewReceiver(sqsClient *sqs.Client, config ReceiverConfig, log *zap.Logger) *Receiver {
+func NewReceiver(consumer queue.QueueConsumer, config ReceiverConfig, log *zap.Logger) *Receiver {
 	return &Receiver{
-		sqsClient: sqsClient,
-		config:    config,
-		log:       log,
+		consumer: consumer,
+		config:   config,
+		log:      log,
 	}
 }
 
@@ -45,8 +45,8 @@ func (r *Receiver) Start(ctx context.Context, out chan<- types.Message) {
 			r.log.Info("Receiver shutting down")
 			return
 		default:
-			result, err := r.sqsClient.Client().ReceiveMessage(ctx, &awssqs.ReceiveMessageInput{
-				QueueUrl:              aws.String(r.sqsClient.QueueURL()),
+			result, err := r.consumer.ReceiveMessages(ctx, &awssqs.ReceiveMessageInput{
+				QueueUrl:              aws.String(r.consumer.QueueURL()),
 				MaxNumberOfMessages:   r.config.MaxMessages,
 				WaitTimeSeconds:       r.config.WaitTimeSeconds,
 				MessageAttributeNames: []string{"All"},

@@ -9,21 +9,21 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/BarkinBalci/event-analytics-service/internal/dto"
-	"github.com/BarkinBalci/event-analytics-service/internal/queue/sqs"
+	"github.com/BarkinBalci/event-analytics-service/internal/queue"
 	"github.com/BarkinBalci/event-analytics-service/internal/repository"
 )
 
 // EventService represents event service
 type EventService struct {
-	sqsClient  *sqs.Client
+	publisher  queue.QueuePublisher
 	repository repository.EventRepository
 	log        *zap.Logger
 }
 
 // NewEventService creates a new event service
-func NewEventService(sqsClient *sqs.Client, repo repository.EventRepository, log *zap.Logger) *EventService {
+func NewEventService(publisher queue.QueuePublisher, repo repository.EventRepository, log *zap.Logger) *EventService {
 	return &EventService{
-		sqsClient:  sqsClient,
+		publisher:  publisher,
 		repository: repo,
 		log:        log,
 	}
@@ -44,9 +44,9 @@ func (s *EventService) ProcessEvent(event *dto.PublishEventRequest) (string, err
 
 	eventID := uuid.New().String()
 
-	err := s.sqsClient.PublishEvent(ctx, event, eventID)
+	err := s.publisher.PublishEvent(ctx, event, eventID)
 	if err != nil {
-		return "", fmt.Errorf("failed to publish event to SQS: %w", err)
+		return "", fmt.Errorf("failed to publish event to queue: %w", err)
 	}
 
 	return eventID, nil

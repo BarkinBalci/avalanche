@@ -14,12 +14,12 @@ import (
 )
 
 type Handler struct {
-	eventService *service.EventService
+	eventService service.EventServicer
 	router       *gin.Engine
 	log          *zap.Logger
 }
 
-func NewHandler(eventService *service.EventService, log *zap.Logger) *Handler {
+func NewHandler(eventService service.EventServicer, log *zap.Logger) *Handler {
 	h := &Handler{
 		eventService: eventService,
 		router:       gin.Default(),

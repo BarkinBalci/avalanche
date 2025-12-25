@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/BarkinBalci/event-analytics-service/internal/config"
-	"github.com/BarkinBalci/event-analytics-service/internal/queue/sqs"
+	"github.com/BarkinBalci/event-analytics-service/internal/queue"
 	"github.com/BarkinBalci/event-analytics-service/internal/repository"
 )
 
@@ -21,14 +21,14 @@ type Consumer struct {
 }
 
 // NewConsumer creates a new consumer with a pipeline architecture
-func NewConsumer(cfg *config.Config, sqsClient *sqs.Client, repo repository.EventRepository, log *zap.Logger) *Consumer {
-	receiver := NewReceiver(sqsClient, ReceiverConfig{
+func NewConsumer(cfg *config.Config, queueConsumer queue.QueueConsumer, repo repository.EventRepository, log *zap.Logger) *Consumer {
+	receiver := NewReceiver(queueConsumer, ReceiverConfig{
 		MaxMessages:     10,
 		WaitTimeSeconds: 20,
 		BufferSize:      100,
 	}, log)
 
-	parser := NewParserStage(sqsClient, NewJSONEventParser(), log)
+	parser := NewParserStage(queueConsumer, NewJSONEventParser(), log)
 
 	batchWriter := NewBatchWriter(repo, BatchWriterConfig{
 		MaxBatchSize: cfg.Consumer.BatchSizeMax,

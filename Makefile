@@ -1,4 +1,4 @@
-.PHONY: fmt build build-api build-consumer lint swagger env
+.PHONY: fmt build build-api build-consumer test test-no-race lint swagger env
 
 fmt:
 	@echo "Formatting code..."
@@ -16,7 +16,7 @@ build-consumer:
 
 test:
 	@echo "Running tests..."
-	@go test -v -race ./...
+	@CGO_ENABLED=1 go test -v -race ./...
 
 lint:
 	@echo "Running linter..."

@@ -8,22 +8,22 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"go.uber.org/zap"
 
-	"github.com/BarkinBalci/event-analytics-service/internal/queue/sqs"
+	"github.com/BarkinBalci/event-analytics-service/internal/queue"
 )
 
 // ParserStage handles parsing SQS messages into domain envelopes
 type ParserStage struct {
-	sqsClient *sqs.Client
-	parser    MessageParser
-	log       *zap.Logger
+	consumer queue.QueueConsumer
+	parser   MessageParser
+	log      *zap.Logger
 }
 
 // NewParserStage creates a new parser stage
-func NewParserStage(sqsClient *sqs.Client, parser MessageParser, log *zap.Logger) *ParserStage {
+func NewParserStage(consumer queue.QueueConsumer, parser MessageParser, log *zap.Logger) *ParserStage {
 	return &ParserStage{
-		sqsClient: sqsClient,
-		parser:    parser,
-		log:       log,
+		consumer: consumer,
+		parser:   parser,
+		log:      log,
 	}
 }
 
@@ -88,8 +88,8 @@ func (p *ParserStage) parseMessage(ctx context.Context, msg types.Message) *Enve
 
 // deleteMessage deletes a message from SQS
 func (p *ParserStage) deleteMessage(ctx context.Context, msg types.Message) error {
-	_, err := p.sqsClient.Client().DeleteMessage(ctx, &awssqs.DeleteMessageInput{
-		QueueUrl:      aws.String(p.sqsClient.QueueURL()),
+	_, err := p.consumer.DeleteMessage(ctx, &awssqs.DeleteMessageInput{
+		QueueUrl:      aws.String(p.consumer.QueueURL()),
 		ReceiptHandle: msg.ReceiptHandle,
 	})
 	if err != nil {

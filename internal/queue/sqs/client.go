@@ -61,6 +61,16 @@ func NewClient(ctx context.Context, SQSConfig envConfig.SQS, log *zap.Logger) (*
 	}, nil
 }
 
+// ReceiveMessages receives messages from SQS
+func (c *Client) ReceiveMessages(ctx context.Context, input *sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error) {
+	return c.client.ReceiveMessage(ctx, input)
+}
+
+// DeleteMessage deletes a message from SQS
+func (c *Client) DeleteMessage(ctx context.Context, input *sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
+	return c.client.DeleteMessage(ctx, input)
+}
+
 // Client returns the underlying SQS client
 func (c *Client) Client() *sqs.Client {
 	return c.client
