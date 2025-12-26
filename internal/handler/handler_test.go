@@ -405,3 +405,89 @@ func TestHandler_GetMetrics_ServiceError(t *testing.T) {
 	assert.Contains(t, response.Message, "database connection error")
 	mockService.AssertExpectations(t)
 }
+
+func TestHandler_GetMetrics_GroupByHour(t *testing.T) {
+	mockService := new(MockEventService)
+	log := zap.NewNop()
+	handler := NewHandler(mockService, log)
+
+	expectedResponse := &dto.GetMetricsResponse{
+		EventName:   "product_view",
+		From:        1766702551,
+		To:          1780702551,
+		TotalCount:  500,
+		UniqueCount: 250,
+		GroupBy:     "hour",
+		Groups: []dto.MetricsGroupData{
+			{GroupValue: "2025-12-27 14:00:00", TotalCount: 150},
+			{GroupValue: "2025-12-27 15:00:00", TotalCount: 200},
+			{GroupValue: "2025-12-27 16:00:00", TotalCount: 150},
+		},
+	}
+
+	mockService.On("GetMetrics", mock.MatchedBy(func(req *dto.GetMetricsRequest) bool {
+		return req.EventName == "product_view" &&
+			req.From == 1766702551 &&
+			req.To == 1780702551 &&
+			req.GroupBy == "hour"
+	})).Return(expectedResponse, nil)
+
+	req, _ := http.NewRequest("GET", "/metrics?event_name=product_view&from=1766702551&to=1780702551&group_by=hour", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response dto.GetMetricsResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "product_view", response.EventName)
+	assert.Equal(t, "hour", response.GroupBy)
+	assert.Len(t, response.Groups, 3)
+	assert.Equal(t, "2025-12-27 14:00:00", response.Groups[0].GroupValue)
+	mockService.AssertExpectations(t)
+}
+
+func TestHandler_GetMetrics_GroupByDay(t *testing.T) {
+	mockService := new(MockEventService)
+	log := zap.NewNop()
+	handler := NewHandler(mockService, log)
+
+	expectedResponse := &dto.GetMetricsResponse{
+		EventName:   "product_view",
+		From:        1766702551,
+		To:          1780702551,
+		TotalCount:  5000,
+		UniqueCount: 2500,
+		GroupBy:     "day",
+		Groups: []dto.MetricsGroupData{
+			{GroupValue: "2025-12-27", TotalCount: 1500},
+			{GroupValue: "2025-12-28", TotalCount: 1800},
+			{GroupValue: "2025-12-29", TotalCount: 1700},
+		},
+	}
+
+	mockService.On("GetMetrics", mock.MatchedBy(func(req *dto.GetMetricsRequest) bool {
+		return req.EventName == "product_view" &&
+			req.From == 1766702551 &&
+			req.To == 1780702551 &&
+			req.GroupBy == "day"
+	})).Return(expectedResponse, nil)
+
+	req, _ := http.NewRequest("GET", "/metrics?event_name=product_view&from=1766702551&to=1780702551&group_by=day", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response dto.GetMetricsResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "product_view", response.EventName)
+	assert.Equal(t, "day", response.GroupBy)
+	assert.Len(t, response.Groups, 3)
+	assert.Equal(t, "2025-12-27", response.Groups[0].GroupValue)
+	mockService.AssertExpectations(t)
+}

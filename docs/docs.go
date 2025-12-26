@@ -132,7 +132,7 @@ const docTemplate = `{
         },
         "/metrics": {
             "get": {
-                "description": "Retrieve aggregated event metrics with optional grouping by channel",
+                "description": "Retrieve aggregated event metrics with optional grouping by channel, hour, or day",
                 "produces": [
                     "application/json"
                 ],
@@ -163,8 +163,13 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "enum": [
+                            "channel",
+                            "hour",
+                            "day"
+                        ],
                         "type": "string",
-                        "description": "Field to group by (channel)",
+                        "description": "Field to group by (channel, hour, day)",
                         "name": "group_by",
                         "in": "query"
                     }

@@ -208,7 +208,8 @@ paths:
       - health
   /metrics:
     get:
-      description: Retrieve aggregated event metrics with optional grouping by channel
+      description: Retrieve aggregated event metrics with optional grouping by channel,
+        hour, or day
       parameters:
       - description: Event name to filter by
         in: query
@@ -225,7 +226,11 @@ paths:
         name: to
         required: true
         type: integer
-      - description: Field to group by (channel)
+      - description: Field to group by (channel, hour, day)
+        enum:
+        - channel
+        - hour
+        - day
         in: query
         name: group_by
         type: string

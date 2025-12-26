@@ -158,13 +158,13 @@ func (h *Handler) publishEventsBulk(c *gin.Context) {
 
 // getMetrics handles GET /metrics
 // @Summary Get aggregated metrics
-// @Description Retrieve aggregated event metrics with optional grouping by channel
+// @Description Retrieve aggregated event metrics with optional grouping by channel, hour, or day
 // @Tags metrics
 // @Produce json
 // @Param event_name query string true "Event name to filter by" example:"product_view"
 // @Param from query int true "Start timestamp (Unix epoch)" example:"1723475612"
 // @Param to query int true "End timestamp (Unix epoch)" example:"1723562012"
-// @Param group_by query string false "Field to group by (channel)" example:"channel"
+// @Param group_by query string false "Field to group by (channel, hour, day)" Enums(channel, hour, day) example:"channel"
 // @Success 200 {object} dto.GetMetricsResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse

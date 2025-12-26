@@ -135,7 +135,7 @@ func TestEventService_ProcessEvent_SQSPublishError(t *testing.T) {
 	mockPublisher.AssertExpectations(t)
 }
 
-func TestEventService_ProcessEvent_UUIDGeneration(t *testing.T) {
+func TestEventService_ProcessEvent_ContentHashIdempotency(t *testing.T) {
 	mockPublisher := new(MockQueuePublisher)
 	mockRepo := new(MockEventRepository)
 	log := zap.NewNop()
@@ -143,18 +143,47 @@ func TestEventService_ProcessEvent_UUIDGeneration(t *testing.T) {
 	service := NewEventService(mockPublisher, mockRepo, log)
 
 	req := &dto.PublishEventRequest{
-		EventName: "test_event",
-		Channel:   "web",
-		UserID:    "user123",
-		Timestamp: testCurrentTime,
+		EventName:  "test_event",
+		Channel:    "web",
+		UserID:     "user123",
+		Timestamp:  testCurrentTime,
+		CampaignID: "campaign1",
 	}
 
 	mockPublisher.On("PublishEvent", mock.Anything, req, mock.AnythingOfType("string")).Return(nil)
 
+	// Same event should produce same event_id (idempotency)
 	eventID1, _ := service.ProcessEvent(req)
 	eventID2, _ := service.ProcessEvent(req)
+	assert.Equal(t, eventID1, eventID2, "Same event should produce same event_id for idempotency")
 
-	assert.NotEqual(t, eventID1, eventID2, "UUIDs should be unique")
+	// Different event should produce different event_id
+	reqDifferent := &dto.PublishEventRequest{
+		EventName:  "different_event",
+		Channel:    "mobile",
+		UserID:     "user456",
+		Timestamp:  testCurrentTime + 100,
+		CampaignID: "campaign2",
+	}
+
+	mockPublisher.On("PublishEvent", mock.Anything, reqDifferent, mock.AnythingOfType("string")).Return(nil)
+
+	eventID3, _ := service.ProcessEvent(reqDifferent)
+	assert.NotEqual(t, eventID1, eventID3, "Different events should produce different event_ids")
+
+	// Same content in different field should produce different event_id
+	reqDifferentChannel := &dto.PublishEventRequest{
+		EventName:  "test_event",
+		Channel:    "mobile", // Different channel
+		UserID:     "user123",
+		Timestamp:  testCurrentTime,
+		CampaignID: "campaign1",
+	}
+
+	mockPublisher.On("PublishEvent", mock.Anything, reqDifferentChannel, mock.AnythingOfType("string")).Return(nil)
+
+	eventID4, _ := service.ProcessEvent(reqDifferentChannel)
+	assert.NotEqual(t, eventID1, eventID4, "Different channel should produce different event_id")
 }
 
 func TestEventService_ProcessBulkEvents_AllSuccess(t *testing.T) {
@@ -398,4 +427,132 @@ func TestEventService_GetMetrics_WithGroupBy(t *testing.T) {
 	assert.Equal(t, "mobile", response.Groups[1].GroupValue)
 	assert.Equal(t, uint64(40), response.Groups[1].TotalCount)
 	mockRepo.AssertExpectations(t)
+}
+
+func TestEventService_GetMetrics_GroupByHour(t *testing.T) {
+	mockPublisher := new(MockQueuePublisher)
+	mockRepo := new(MockEventRepository)
+	logger, _ := zap.NewDevelopment()
+	eventService := NewEventService(mockPublisher, mockRepo, logger)
+
+	req := &dto.GetMetricsRequest{
+		EventName: "product_view",
+		From:      1723475612,
+		To:        1723562012, // ~24 hours
+		GroupBy:   "hour",
+	}
+
+	expectedQuery := repository.MetricsQuery{
+		EventName: "product_view",
+		From:      1723475612,
+		To:        1723562012,
+		GroupBy:   "hour",
+	}
+
+	expectedResult := &repository.MetricsResult{
+		TotalCount:  500,
+		UniqueCount: 250,
+		Groups: []repository.MetricsGroupResult{
+			{GroupValue: "2024-08-12 14:00:00", TotalCount: 150},
+			{GroupValue: "2024-08-12 15:00:00", TotalCount: 200},
+			{GroupValue: "2024-08-12 16:00:00", TotalCount: 150},
+		},
+	}
+
+	mockRepo.On("GetMetrics", mock.Anything, expectedQuery).Return(expectedResult, nil)
+
+	response, err := eventService.GetMetrics(req)
+	assert.NoError(t, err)
+	assert.NotNil(t, response)
+	assert.Equal(t, uint64(500), response.TotalCount)
+	assert.Equal(t, uint64(250), response.UniqueCount)
+	assert.Equal(t, "hour", response.GroupBy)
+	assert.Len(t, response.Groups, 3)
+	assert.Equal(t, "2024-08-12 14:00:00", response.Groups[0].GroupValue)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestEventService_GetMetrics_GroupByDay(t *testing.T) {
+	mockPublisher := new(MockQueuePublisher)
+	mockRepo := new(MockEventRepository)
+	logger, _ := zap.NewDevelopment()
+	eventService := NewEventService(mockPublisher, mockRepo, logger)
+
+	req := &dto.GetMetricsRequest{
+		EventName: "product_view",
+		From:      1723475612,
+		To:        1726067612, // ~30 days
+		GroupBy:   "day",
+	}
+
+	expectedQuery := repository.MetricsQuery{
+		EventName: "product_view",
+		From:      1723475612,
+		To:        1726067612,
+		GroupBy:   "day",
+	}
+
+	expectedResult := &repository.MetricsResult{
+		TotalCount:  5000,
+		UniqueCount: 2500,
+		Groups: []repository.MetricsGroupResult{
+			{GroupValue: "2024-08-12", TotalCount: 1500},
+			{GroupValue: "2024-08-13", TotalCount: 1800},
+			{GroupValue: "2024-08-14", TotalCount: 1700},
+		},
+	}
+
+	mockRepo.On("GetMetrics", mock.Anything, expectedQuery).Return(expectedResult, nil)
+
+	response, err := eventService.GetMetrics(req)
+	assert.NoError(t, err)
+	assert.NotNil(t, response)
+	assert.Equal(t, uint64(5000), response.TotalCount)
+	assert.Equal(t, uint64(2500), response.UniqueCount)
+	assert.Equal(t, "day", response.GroupBy)
+	assert.Len(t, response.Groups, 3)
+	assert.Equal(t, "2024-08-12", response.Groups[0].GroupValue)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestEventService_GetMetrics_InvalidGroupBy(t *testing.T) {
+	mockPublisher := new(MockQueuePublisher)
+	mockRepo := new(MockEventRepository)
+	logger, _ := zap.NewDevelopment()
+	eventService := NewEventService(mockPublisher, mockRepo, logger)
+
+	req := &dto.GetMetricsRequest{
+		EventName: "product_view",
+		From:      1723475612,
+		To:        1723562012,
+		GroupBy:   "week", // Invalid group_by
+	}
+
+	response, err := eventService.GetMetrics(req)
+	assert.Error(t, err)
+	assert.Nil(t, response)
+	assert.Contains(t, err.Error(), "invalid group_by value")
+	assert.Contains(t, err.Error(), "week")
+	mockRepo.AssertNotCalled(t, "GetMetrics")
+}
+
+func TestEventService_GetMetrics_HourlyGroupingTooLargeRange(t *testing.T) {
+	mockPublisher := new(MockQueuePublisher)
+	mockRepo := new(MockEventRepository)
+	logger, _ := zap.NewDevelopment()
+	eventService := NewEventService(mockPublisher, mockRepo, logger)
+
+	req := &dto.GetMetricsRequest{
+		EventName: "product_view",
+		From:      1723475612,
+		To:        1723475612 + 91*24*3600, // 91 days - too large
+		GroupBy:   "hour",
+	}
+
+	response, err := eventService.GetMetrics(req)
+	assert.Error(t, err)
+	assert.Nil(t, response)
+	assert.Contains(t, err.Error(), "time range too large for hourly grouping")
+	assert.Contains(t, err.Error(), "91 days")
+	mockRepo.AssertNotCalled(t, "GetMetrics")
 }

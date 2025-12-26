@@ -148,19 +148,39 @@ func (r *Repository) GetMetrics(ctx context.Context, query repository.MetricsQue
 
 	// If groupBy is specified, get grouped metrics
 	if query.GroupBy != "" {
-		if query.GroupBy != "channel" {
-			return nil, fmt.Errorf("unsupported group_by value: %s (only 'channel' is supported)", query.GroupBy)
+		validGroupBy := map[string]bool{"channel": true, "hour": true, "day": true}
+		if !validGroupBy[query.GroupBy] {
+			return nil, fmt.Errorf("unsupported group_by value: %s (supported: channel, hour, day)", query.GroupBy)
+		}
+
+		var selectField string
+		var groupByClause string
+		var orderBy string
+
+		switch query.GroupBy {
+		case "channel":
+			selectField = "channel"
+			groupByClause = "GROUP BY channel"
+			orderBy = "ORDER BY total_count DESC"
+		case "hour":
+			selectField = "formatDateTime(toStartOfHour(toDateTime(timestamp)), '%Y-%m-%d %H:00:00')"
+			groupByClause = "GROUP BY toStartOfHour(toDateTime(timestamp))"
+			orderBy = "ORDER BY group_value ASC"
+		case "day":
+			selectField = "formatDateTime(toStartOfDay(toDateTime(timestamp)), '%Y-%m-%d')"
+			groupByClause = "GROUP BY toStartOfDay(toDateTime(timestamp))"
+			orderBy = "ORDER BY group_value ASC"
 		}
 
 		groupedQuery := fmt.Sprintf(`
 			SELECT
-				channel as group_value,
+				%s as group_value,
 				count() as total_count
 			FROM events FINAL
 			%s
-			GROUP BY channel
-			ORDER BY total_count DESC
-		`, whereClause)
+			%s
+			%s
+		`, selectField, whereClause, groupByClause, orderBy)
 
 		rows, err := r.client.Conn().Query(ctx, groupedQuery, args...)
 		if err != nil {

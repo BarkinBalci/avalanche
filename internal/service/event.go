@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/BarkinBalci/event-analytics-service/internal/dto"
@@ -29,6 +30,23 @@ func NewEventService(publisher queue.QueuePublisher, repo repository.EventReposi
 	}
 }
 
+// computeEventID generates a deterministic event ID based on event content
+// Uses SHA-256 hash of: user_id|event_name|timestamp|campaign_id|channel
+func computeEventID(event *dto.PublishEventRequest) string {
+	// Concatenate fields that uniquely identify an event
+	data := fmt.Sprintf("%s|%s|%d|%s|%s",
+		event.UserID,
+		event.EventName,
+		event.Timestamp,
+		event.CampaignID,
+		event.Channel,
+	)
+
+	// SHA-256 hash for deterministic ID
+	hash := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(hash[:])
+}
+
 // ProcessEvent processes a single event
 func (s *EventService) ProcessEvent(event *dto.PublishEventRequest) (string, error) {
 	ctx := context.Background()
@@ -42,7 +60,7 @@ func (s *EventService) ProcessEvent(event *dto.PublishEventRequest) (string, err
 		return "", fmt.Errorf("timestamp cannot be in the future: %d > %d", event.Timestamp, currentTime)
 	}
 
-	eventID := uuid.New().String()
+	eventID := computeEventID(event)
 
 	err := s.publisher.PublishEvent(ctx, event, eventID)
 	if err != nil {
@@ -84,6 +102,24 @@ func (s *EventService) GetMetrics(req *dto.GetMetricsRequest) (*dto.GetMetricsRe
 			zap.Int64("to", req.To),
 			zap.String("event_name", req.EventName))
 		return nil, fmt.Errorf("from timestamp must be less than or equal to to timestamp")
+	}
+
+	// Validate group_by parameter
+	if req.GroupBy != "" {
+		validGroupBy := map[string]bool{"channel": true, "hour": true, "day": true}
+		if !validGroupBy[req.GroupBy] {
+			s.log.Warn("Invalid group_by value",
+				zap.String("group_by", req.GroupBy))
+			return nil, fmt.Errorf("invalid group_by value: %s (supported: channel, hour, day)", req.GroupBy)
+		}
+
+		// Warn if time range is too large for hourly grouping
+		rangeSeconds := req.To - req.From
+		if req.GroupBy == "hour" && rangeSeconds > 90*24*3600 {
+			s.log.Warn("Large time range for hourly grouping",
+				zap.Int64("range_days", rangeSeconds/(24*3600)))
+			return nil, fmt.Errorf("time range too large for hourly grouping (max 90 days, got %d days)", rangeSeconds/(24*3600))
+		}
 	}
 
 	// Build repository query
