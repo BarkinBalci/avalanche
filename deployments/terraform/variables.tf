@@ -78,13 +78,13 @@ variable "image_tag" {
 variable "api_cpu" {
   description = "API task CPU"
   type        = string
-  default     = "512"
+  default     = "256"
 }
 
 variable "api_memory" {
   description = "API task memory"
   type        = string
-  default     = "1024"
+  default     = "512"
 }
 
 variable "api_desired_count" {
@@ -108,13 +108,13 @@ variable "api_max_capacity" {
 variable "consumer_cpu" {
   description = "Consumer task CPU"
   type        = string
-  default     = "1024"
+  default     = "256"
 }
 
 variable "consumer_memory" {
   description = "Consumer task memory"
   type        = string
-  default     = "2048"
+  default     = "512"
 }
 
 variable "consumer_desired_count" {
