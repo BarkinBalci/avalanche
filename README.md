@@ -1,15 +1,15 @@
-# event-analytics-service
-An event ingestion and analytics service.
+# Avalanche
+A highly scalable event ingestion and analytics service.
 
-[![CI](https://github.com/BarkinBalci/event-analytics-service/actions/workflows/ci.yml/badge.svg)](https://github.com/BarkinBalci/event-analytics-service/actions/workflows/ci.yml)
-[![CD](https://github.com/BarkinBalci/event-analytics-service/actions/workflows/cd.yml/badge.svg)](https://github.com/BarkinBalci/event-analytics-service/actions/workflows/cd.yml)
+[![CI](https://github.com/BarkinBalci/avalanche/actions/workflows/ci.yml/badge.svg)](https://github.com/BarkinBalci/avalanche/actions/workflows/ci.yml)
+[![CD](https://github.com/BarkinBalci/avalanche/actions/workflows/cd.yml/badge.svg)](https://github.com/BarkinBalci/avalanche/actions/workflows/cd.yml)
 ![Go](https://img.shields.io/badge/Go-1.25.5-00ADD8?logo=go)
 ![Terraform](https://img.shields.io/badge/Terraform-1.14.3-7B42BC?logo=terraform)
 
 ## Architecture
 ![An architecture diagram](docs/architecture_diagram.png)
 
-The service uses a two-component architecture that separates ingestion from processing. The API Service accepts HTTP events, publishes them to SQS, and immediately returns a 202 Accepted response. Meanwhile, the Consumer Service independently polls SQS and writes events to ClickHouse for analytics.
+Avalanche uses a two-component architecture that separates ingestion from processing. The API Service accepts HTTP events, publishes them to SQS, and immediately returns a 202 Accepted response. Meanwhile, the Consumer Service independently polls SQS and writes events to ClickHouse for analytics.
 
 This design keeps the API highly available since it never waits for database writes, while SQS buffers events between the two services. Both components can scale independently based on their workloads, ensuring the system handles traffic spikes without losing events.
 
